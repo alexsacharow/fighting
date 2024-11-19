@@ -70,7 +70,7 @@ class Fighter:
 
         # Get keypress
         key = pygame.key.get_pressed()  # Register key pressed into key variable
-        print(key)
+        # print(key)
 
         # Can only perform other actions if not currently attacking
         if self.attacking == False and self.alive == True and round_over == False:
