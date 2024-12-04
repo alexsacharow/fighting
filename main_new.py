@@ -1,28 +1,42 @@
 import pygame
+import os
+import threading
 from pygame import mixer
 from fighter import Fighter
 
-
 # Function to draw background
 def draw_bg():
-    # Scale original background image to game window size
     scaled_bg = pygame.transform.scale(bg_image, (SCREEN_WIDTH, SCREEN_HEIGHT))
     screen.blit(scaled_bg, (0, 0))
 
-
 # Function to draw text
 def draw_text(text, font, text_col, x, y):
-    img = font.render(text, True, text_col)  # Convert text to image
+    img = font.render(text, True, text_col)
     screen.blit(img, (x, y))
-
 
 # Function for drawing fighter health bars
 def draw_health_bar(health, x, y):
     ratio = health / 100
     pygame.draw.rect(screen, WHITE, (x - 2, y - 2, 404, 34))
     pygame.draw.rect(screen, RED, (x, y, 400, 30))
-    pygame.draw.rect(screen, YELLOW, (x, y, 400 * ratio, 30))  # Adjust health bar based on ratio of health
+    pygame.draw.rect(screen, YELLOW, (x, y, 400 * ratio, 30))
 
+# Function to get a list of music files from a folder
+def get_music_files(folder_path):
+    music_files = []
+    for file in os.listdir(folder_path):
+        if file.endswith(('.mp3', '.wav', '.ogg')):
+            music_files.append(os.path.join(folder_path, file))
+    return music_files
+
+# Function to play music files in a loop
+def play_music_files(music_files):
+    while True:
+        for music_file in music_files:
+            pygame.mixer.music.load(music_file)
+            pygame.mixer.music.play()
+            while pygame.mixer.music.get_busy():
+                pygame.time.Clock().tick(10)
 
 mixer.init()
 pygame.init()
@@ -44,13 +58,18 @@ YELLOW = (255, 255, 0)
 WHITE = (255, 255, 255)
 
 # Load music and sounds
-pygame.mixer.music.load("assets/audio/music.mp3")
 sword_fx = pygame.mixer.Sound("assets/audio/sword.mp3")
 sword_fx.set_volume(0.5)
 hit_fx = pygame.mixer.Sound("assets/audio/hit.mp3")
 hit_fx.set_volume(0.5)
-# pygame.mixer.music.set_volume(1)
-pygame.mixer.music.play(-1, 0.0, 10)
+
+# Get the list of music files
+music_files = get_music_files('assets/music')
+
+# Start playing music files in a separate thread
+music_thread = threading.Thread(target=play_music_files, args=(music_files,))
+music_thread.daemon = True
+music_thread.start()
 
 # Load background
 bg_image = pygame.image.load("assets/pic/bg/bg_final.png").convert_alpha()
@@ -105,18 +124,13 @@ while IS_RUNNING:
 
     # Update countdown
     if intro_count <= 0:
-        # Move fighters
         fighter_1.move(SCREEN_WIDTH, SCREEN_HEIGHT, screen, fighter_2, round_over)
         fighter_2.move(SCREEN_WIDTH, SCREEN_HEIGHT, screen, fighter_1, round_over)
     else:
-        # Display countdown timer
         draw_text(str(intro_count), count_font, RED, SCREEN_WIDTH // 2, SCREEN_HEIGHT / 4)
-
-        # Update countdown timer
         if (pygame.time.get_ticks() - last_count_update) >= 1000:
             intro_count -= 1
             last_count_update = pygame.time.get_ticks()
-            print(intro_count)
 
     # Update fighters
     fighter_1.update()
@@ -137,13 +151,10 @@ while IS_RUNNING:
             round_over = True
             round_over_time = pygame.time.get_ticks()
     else:
-        # Display win text
         draw_text("Player {} Wins!".format(1 if fighter_1.alive else 2), victory_font, RED, SCREEN_WIDTH // 2 - 200, SCREEN_HEIGHT // 4)
-        # Additional logic for handling end of the round
         if pygame.time.get_ticks() - round_over_time > ROUND_OVER_COOLDOWN:
             round_over = False
             intro_count = 3
-            # Recreate instances of fighters
             fighter_1 = Fighter(1, 300, SCREEN_HEIGHT - 230, False, HERO1_DATA, hero1_sheet, HERO1_ANIMATION_FRAMES, sword_fx, hit_fx)
             fighter_2 = Fighter(2, SCREEN_WIDTH - 300, SCREEN_HEIGHT - 230, True, HERO2_DATA, hero2_sheet, HERO2_ANIMATION_FRAMES, sword_fx, hit_fx)
 
